@@ -625,8 +625,24 @@ st.markdown("""
         padding: 0 !important;
         border: none !important;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 </style>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = window.parent.document.querySelector("[data-testid='stSidebar']");
+        if (sidebar.style.transform === 'translateX(-100%)' || !sidebar.style.transform) {
+            sidebar.style.transform = 'translateX(0)';
+        } else {
+            sidebar.style.transform = 'translateX(-100%)';
+        }
+    }
+</script>
 """, unsafe_allow_html=True)
 
 # Initialisation des variables de session
@@ -642,11 +658,6 @@ if 'generation_complete' not in st.session_state:
     st.session_state.generation_complete = False
 if 'start_time' not in st.session_state:
     st.session_state.start_time = None
-
-def toggle_sidebar():
-    """Bascule l'état de la sidebar entre visible et cachée"""
-    st.session_state.sidebar_state = 'collapsed' if st.session_state.sidebar_state == 'expanded' else 'expanded'
-    st.experimental_rerun()
 
 def read_file(uploaded_file):
     """Lit le contenu d'un fichier uploadé (PDF, TXT ou DOCX)"""
@@ -826,10 +837,11 @@ def generate_dcf():
 
 def main():
     """Fonction principale de l'application Streamlit."""
-    # Bouton pour basculer la sidebar
-    st.markdown("""
-    <button class="sidebar-toggle" onclick="parent.document.querySelector('[data-testid=\"stSidebar\"]').style.transform = parent.document.querySelector('[data-testid=\"stSidebar\"]').style.transform === 'translateX(-100%)' ? 'translateX(0)' : 'translateX(-100%)'">☰</button>
-    """, unsafe_allow_html=True)
+    # Bouton de bascule toujours visible
+    st.markdown(
+        '<button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>',
+        unsafe_allow_html=True
+    )
 
     # Header avec dégradé de couleur
     st.markdown("""
@@ -901,10 +913,6 @@ def main():
         status_text = st.empty()
         status_text.text(f"⚡ Génération en cours... {st.session_state.progress}%")
     elif st.session_state.get('generation_complete', False) and st.session_state.get('progress', 0) == 100:
-        st.success("✅ DCF généré avec succès !")
-    
-    # Affichage du résultat si disponible dans la session
-    if st.session_state.get('dcf_result'):
         elapsed_time = time.time() - st.session_state.start_time if st.session_state.start_time else 0
         st.markdown(f"""
         <div class="success-box">
@@ -912,7 +920,9 @@ def main():
             <p>Temps de traitement : {elapsed_time:.2f} secondes</p>
         </div>
         """, unsafe_allow_html=True)
-        
+    
+    # Affichage du résultat si disponible dans la session
+    if st.session_state.get('dcf_result'):
         if st.session_state.show_raw_output:
             with st.expander("📄 Sortie brute de l'API"):
                 st.code(st.session_state.dcf_result)
