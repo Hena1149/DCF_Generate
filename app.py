@@ -296,12 +296,12 @@ def main():
     # Header avec dégradé de couleur
     st.markdown("""
     <div class="header-container">
-        <h1 class="header-title">📄 Générateur de Dossier de Conception Fonctionnelle (DCF)</h1>
+        <h1 class="header-title"> Générateur de Dossier de Conception Fonctionnelle (DCF)</h1>
         <p class="header-subtitle">Transformez votre cahier des charges en un DCF professionnel en quelques clics</p>
     </div>
     """, unsafe_allow_html=True)
     
-    with st.expander("📋 Instructions d'utilisation", expanded=True):
+    with st.expander("Instructions d'utilisation", expanded=True):
         st.markdown("""
         <div class="info-box">
             <h4 style="margin-top: 0;">Comment utiliser cette application :</h4>
@@ -342,7 +342,7 @@ def main():
     )
     
     # Bouton de génération avec icône
-    generate_button = st.button("🚀 Générer le DCF", type="primary", use_container_width=True)
+    generate_button = st.button("Générer le DCF", type="primary", use_container_width=True)
     
     if generate_button:
         if not uploaded_file:
@@ -362,7 +362,7 @@ def main():
             return
         
         try:
-            with st.spinner("📖 Lecture du fichier en cours..."):
+            with st.spinner("Lecture du fichier en cours..."):
                 cdc_text = read_file(uploaded_file)
                 time.sleep(1)
             
@@ -374,18 +374,18 @@ def main():
                 """, unsafe_allow_html=True)
                 return
             
-            with st.spinner("🧠 Génération du prompt..."):
+            with st.spinner("Génération du prompt..."):
                 prompt = generate_prompt(cdc_text)
                 time.sleep(1)
                 if show_prompt:
-                    with st.expander("🔍 Prompt envoyé à l'API"):
+                    with st.expander("Prompt envoyé à l'API"):
                         st.code(prompt)
             
             progress_bar = st.progress(0)
             status_text = st.empty()
             
             for percent in range(0, 101, 10):
-                status_text.text(f"⚡ Génération en cours... {percent}%")
+                status_text.text(f"Génération en cours... {percent}%")
                 progress_bar.progress(percent)
                 time.sleep(0.1)
             
@@ -398,17 +398,17 @@ def main():
             
             st.markdown(f"""
             <div class="success-box">
-                <h4 style="margin-top: 0;">✅ DCF généré avec succès !</h4>
+                <h4 style="margin-top: 0;"> DCF généré avec succès !</h4>
                 <p>Temps de traitement : {elapsed_time:.2f} secondes</p>
             </div>
             """, unsafe_allow_html=True)
             
             if show_raw_output:
-                with st.expander("📄 Sortie brute de l'API"):
+                with st.expander(" Sortie brute de l'API"):
                     st.code(dcf_result)
             
             # Affichage du résultat avec onglets
-            tab1, tab2 = st.tabs(["📄 Aperçu du DCF", "💾 Téléchargement"])
+            tab1, tab2 = st.tabs(["Aperçu du DCF", "Téléchargement"])
             
             with tab1:
                 st.subheader("Résultat - Dossier de Conception Fonctionnelle")
@@ -420,7 +420,7 @@ def main():
                 with col1:
                     word_buffer = save_dcf_to_word(dcf_result)
                     st.download_button(
-                        label="📝 Télécharger en Word",
+                        label="Télécharger en Word",
                         data=word_buffer,
                         file_name="DCF_Généré.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -430,7 +430,7 @@ def main():
                 with col2:
                     txt_buffer = save_dcf_to_txt(dcf_result)
                     st.download_button(
-                        label="📄 Télécharger en TXT",
+                        label="Télécharger en TXT",
                         data=txt_buffer,
                         file_name="DCF_Généré.txt",
                         mime="text/plain",
@@ -440,7 +440,7 @@ def main():
         except Exception as e:
             st.markdown(f"""
             <div class="error-box">
-                <h4 style="margin-top: 0;">❌ Une erreur est survenue</h4>
+                <h4 style="margin-top: 0;"> Une erreur est survenue</h4>
                 <p>{str(e)}</p>
             </div>
             """, unsafe_allow_html=True)
