@@ -5,6 +5,7 @@ from docx import Document
 from openai import AzureOpenAI
 import io
 import time
+import threading
 
 # Configuration de la page
 st.set_page_config(
@@ -73,6 +74,7 @@ st.markdown("""
     .sidebar .sidebar-content {
         background-color: var(--secondary-color) !important;
         border-right: 1px solid var(--border-color);
+        transition: transform 0.3s ease;
     }
     
     h1, h2, h3, h4, h5, h6 {
@@ -158,8 +160,53 @@ st.markdown("""
     [data-testid="stToolbar"] {
         display: none !important;
     }
+    
+    .sidebar-toggle {
+        position: fixed;
+        left: 10px;
+        top: 10px;
+        z-index: 1000;
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        border-radius: 50% !important;
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        border: none !important;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 </style>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = window.parent.document.querySelector("[data-testid='stSidebar']");
+        if (sidebar.style.transform === 'translateX(-100%)' || !sidebar.style.transform) {
+            sidebar.style.transform = 'translateX(0)';
+        } else {
+            sidebar.style.transform = 'translateX(-100%)';
+        }
+    }
+</script>
 """, unsafe_allow_html=True)
+
+# Initialisation des variables de session
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = 'expanded'
+if 'dcf_result' not in st.session_state:
+    st.session_state.dcf_result = None
+if 'uploaded_file' not in st.session_state:
+    st.session_state.uploaded_file = None
+if 'progress' not in st.session_state:
+    st.session_state.progress = 0
+if 'generation_complete' not in st.session_state:
+    st.session_state.generation_complete = False
+if 'start_time' not in st.session_state:
+    st.session_state.start_time = None
 
 def read_file(uploaded_file):
     """Lit le contenu d'un fichier uploadé (PDF, TXT ou DOCX)"""
@@ -291,8 +338,60 @@ def save_dcf_to_txt(text, filename="DCF_Généré.txt"):
     buffer.seek(0)
     return buffer
 
+def update_progress():
+    """Met à jour la barre de progression en fonction du temps écoulé"""
+    while not st.session_state.generation_complete:
+        if st.session_state.start_time:
+            elapsed = time.time() - st.session_state.start_time
+            # Estimation du temps total (peut être ajusté)
+            total_time_estimate = 30  # secondes
+            progress = min(int((elapsed / total_time_estimate) * 100), 100)
+            st.session_state.progress = progress
+        time.sleep(0.1)
+
+def generate_dcf():
+    """Fonction pour générer le DCF dans un thread séparé"""
+    try:
+        st.session_state.start_time = time.time()
+        st.session_state.generation_complete = False
+        
+        # Démarrer le thread de mise à jour de la progression
+        progress_thread = threading.Thread(target=update_progress)
+        progress_thread.start()
+        
+        with st.spinner("📖 Lecture du fichier en cours..."):
+            cdc_text = read_file(st.session_state.uploaded_file)
+            time.sleep(1)
+        
+        if not cdc_text.strip():
+            st.session_state.generation_complete = True
+            st.error("Le fichier semble vide ou n'a pas pu être lu correctement.")
+            return
+        
+        with st.spinner("🧠 Génération du prompt..."):
+            prompt = generate_prompt(cdc_text)
+            time.sleep(1)
+            if st.session_state.show_prompt:
+                with st.expander("🔍 Prompt envoyé à l'API"):
+                    st.code(prompt)
+        
+        dcf_result = call_gpt(prompt, st.session_state.api_key, st.session_state.endpoint, st.session_state.deployment)
+        st.session_state.dcf_result = dcf_result
+        st.session_state.generation_complete = True
+        st.session_state.progress = 100
+        
+    except Exception as e:
+        st.session_state.generation_complete = True
+        st.error(f"Une erreur est survenue: {str(e)}")
+
 def main():
     """Fonction principale de l'application Streamlit."""
+    # Bouton de bascule toujours visible
+    st.markdown(
+        '<button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>',
+        unsafe_allow_html=True
+    )
+
     # Header avec dégradé de couleur
     st.markdown("""
     <div class="header-container">
@@ -314,6 +413,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
+    # Sidebar avec état contrôlé par session
     with st.sidebar:
         st.markdown("""
         <div style="border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 20px;">
@@ -322,15 +422,15 @@ def main():
         """, unsafe_allow_html=True)
         
         st.subheader("API Azure OpenAI")
-        api_key = st.text_input("Clé API", type="password", help="La clé API pour accéder au service Azure OpenAI")
-        endpoint = st.text_input("Endpoint", value="https://chat-genai.openai.azure.com/", help="L'URL du endpoint Azure OpenAI")
-        deployment = st.text_input("Modèle", value="gpt-4o", help="Le nom du modèle déployé dans Azure OpenAI")
+        st.session_state.api_key = st.text_input("Clé API", type="password", help="La clé API pour accéder au service Azure OpenAI", key="api_key")
+        st.session_state.endpoint = st.text_input("Endpoint", value="https://chat-genai.openai.azure.com/", help="L'URL du endpoint Azure OpenAI", key="endpoint")
+        st.session_state.deployment = st.text_input("Modèle", value="gpt-4o", help="Le nom du modèle déployé dans Azure OpenAI", key="deployment")
         
         st.markdown("---")
         
         st.subheader("Options")
-        show_prompt = st.checkbox("Afficher le prompt envoyé à l'API", value=False)
-        show_raw_output = st.checkbox("Afficher la sortie brute de l'API", value=False)
+        st.session_state.show_prompt = st.checkbox("Afficher le prompt envoyé à l'API", value=False, key="show_prompt")
+        st.session_state.show_raw_output = st.checkbox("Afficher la sortie brute de l'API", value=False, key="show_raw_output")
     
     # Zone de téléchargement du fichier avec style amélioré
     st.subheader("📤 Téléversement du fichier")
@@ -338,112 +438,75 @@ def main():
         " ",
         type=["pdf", "txt", "docx"],
         help="Format acceptés: PDF, TXT ou DOCX",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="file_uploader"
     )
     
-    # Bouton de génération avec icône
-    generate_button = st.button("🚀 Générer le DCF", type="primary", use_container_width=True)
+    if uploaded_file:
+        st.session_state.uploaded_file = uploaded_file
     
-    if generate_button:
-        if not uploaded_file:
-            st.markdown("""
-            <div class="error-box">
-                <p style="margin: 0;">Veuillez téléverser un fichier CDC.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            return
+    # Bouton de génération avec icône
+    if st.button("🚀 Générer le DCF", type="primary", use_container_width=True, key="generate_button"):
+        if not st.session_state.get('uploaded_file'):
+            st.error("Veuillez téléverser un fichier CDC.")
+        elif not st.session_state.get('api_key') or not st.session_state.get('endpoint') or not st.session_state.get('deployment'):
+            st.error("Veuillez configurer les paramètres Azure OpenAI dans la barre latérale.")
+        else:
+            # Démarrer la génération dans un thread séparé
+            thread = threading.Thread(target=generate_dcf)
+            thread.start()
+    
+    # Barre de progression
+    if st.session_state.get('progress', 0) > 0 and not st.session_state.get('generation_complete', True):
+        progress_bar = st.progress(st.session_state.progress)
+        status_text = st.empty()
+        status_text.text(f"⚡ Génération en cours... {st.session_state.progress}%")
+    elif st.session_state.get('generation_complete', False) and st.session_state.get('progress', 0) == 100:
+        elapsed_time = time.time() - st.session_state.start_time if st.session_state.start_time else 0
+        st.markdown(f"""
+        <div class="success-box">
+            <h4 style="margin-top: 0;">✅ DCF généré avec succès !</h4>
+            <p>Temps de traitement : {elapsed_time:.2f} secondes</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Affichage du résultat si disponible dans la session
+    if st.session_state.get('dcf_result'):
+        if st.session_state.show_raw_output:
+            with st.expander("📄 Sortie brute de l'API"):
+                st.code(st.session_state.dcf_result)
         
-        if not api_key or not endpoint or not deployment:
-            st.markdown("""
-            <div class="error-box">
-                <p style="margin: 0;">Veuillez configurer les paramètres Azure OpenAI dans la barre latérale.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            return
+        # Affichage du résultat avec onglets
+        tab1, tab2 = st.tabs(["📄 Aperçu du DCF", "💾 Téléchargement"])
         
-        try:
-            with st.spinner("📖 Lecture du fichier en cours..."):
-                cdc_text = read_file(uploaded_file)
-                time.sleep(1)
+        with tab1:
+            st.subheader("Résultat - Dossier de Conception Fonctionnelle")
+            st.markdown(st.session_state.dcf_result)
+        
+        with tab2:
+            st.subheader("Options de téléchargement")
+            col1, col2 = st.columns(2)
+            with col1:
+                word_buffer = save_dcf_to_word(st.session_state.dcf_result)
+                st.download_button(
+                    label="📝 Télécharger en Word",
+                    data=word_buffer,
+                    file_name="DCF_Généré.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    key="download_word"
+                )
             
-            if not cdc_text.strip():
-                st.markdown("""
-                <div class="error-box">
-                    <p style="margin: 0;">Le fichier semble vide ou n'a pas pu être lu correctement.</p>
-                </div>
-                """, unsafe_allow_html=True)
-                return
-            
-            with st.spinner("🧠 Génération du prompt..."):
-                prompt = generate_prompt(cdc_text)
-                time.sleep(1)
-                if show_prompt:
-                    with st.expander("🔍 Prompt envoyé à l'API"):
-                        st.code(prompt)
-            
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for percent in range(0, 101, 10):
-                status_text.text(f"⚡ Génération en cours... {percent}%")
-                progress_bar.progress(percent)
-                time.sleep(0.1)
-            
-            start_time = time.time()
-            dcf_result = call_gpt(prompt, api_key, endpoint, deployment)
-            elapsed_time = time.time() - start_time
-            
-            progress_bar.empty()
-            status_text.empty()
-            
-            st.markdown(f"""
-            <div class="success-box">
-                <h4 style="margin-top: 0;">✅ DCF généré avec succès !</h4>
-                <p>Temps de traitement : {elapsed_time:.2f} secondes</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if show_raw_output:
-                with st.expander("📄 Sortie brute de l'API"):
-                    st.code(dcf_result)
-            
-            # Affichage du résultat avec onglets
-            tab1, tab2 = st.tabs(["📄 Aperçu du DCF", "💾 Téléchargement"])
-            
-            with tab1:
-                st.subheader("Résultat - Dossier de Conception Fonctionnelle")
-                st.markdown(dcf_result)
-            
-            with tab2:
-                st.subheader("Options de téléchargement")
-                col1, col2 = st.columns(2)
-                with col1:
-                    word_buffer = save_dcf_to_word(dcf_result)
-                    st.download_button(
-                        label="📝 Télécharger en Word",
-                        data=word_buffer,
-                        file_name="DCF_Généré.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True
-                    )
-                
-                with col2:
-                    txt_buffer = save_dcf_to_txt(dcf_result)
-                    st.download_button(
-                        label="📄 Télécharger en TXT",
-                        data=txt_buffer,
-                        file_name="DCF_Généré.txt",
-                        mime="text/plain",
-                        use_container_width=True
-                    )
-            
-        except Exception as e:
-            st.markdown(f"""
-            <div class="error-box">
-                <h4 style="margin-top: 0;">❌ Une erreur est survenue</h4>
-                <p>{str(e)}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            with col2:
+                txt_buffer = save_dcf_to_txt(st.session_state.dcf_result)
+                st.download_button(
+                    label="📄 Télécharger en TXT",
+                    data=txt_buffer,
+                    file_name="DCF_Généré.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="download_txt"
+                )
 
 if __name__ == "__main__":
     main()
