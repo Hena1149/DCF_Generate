@@ -95,61 +95,142 @@ def read_file(uploaded_file):
         raise ValueError("Format non supporté. Utilisez un fichier PDF, TXT ou DOCX.")
 
 def generate_prompt(cdc_text):
-    """Génère le prompt pour GPT à partir du texte du CDC."""
+    """Génère le prompt pour GPT à partir du texte du CDC"""
     return f"""
-Tu es un assistant expert en conception fonctionnelle de systèmes d'information, et tu dois rédiger un Dossier de Conception Fonctionnelle (DCF) à partir d'un cahier des charges (CDC) fourni ci-dessous.
+Tu es un assistant expert en conception fonctionnelle de systèmes d'information, et tu dois rédiger un Dossier de Conception Fonctionnelle (DCF) détaillé et complet à partir d'un cahier des charges (CDC) fourni ci-dessous.
 
-Le DCF que tu vas rédiger doit **respecter rigoureusement la structure suivante**, issue du guide d'élaboration DDI M IT 02.02 :
+Le DCF que tu vas rédiger doit **respecter rigoureusement la structure suivante**, issue du guide d'élaboration DDI M IT 02.02, en fournissant des informations précises et exhaustives pour chaque section :
 
 ---
 
 ### 1. CADRE GENERAL
-1.1. Présentation générale du système (objectifs, fonctions globales)
-1.2. Références (documents applicables et références)
-1.3. Environnement (positionnement dans le SI, environnement technique)
-1.4. Terminologie et sigles utilisés
+1.1. Présentation générale du système
+   - Objectifs stratégiques et opérationnels
+   - Périmètre fonctionnel précis
+   - Finalité du système
+   - Bénéfices attendus
+   - Publics cibles
+
+1.2. Références
+   - Documents normatifs (liste complète)
+   - Standards applicables
+   - Contraintes réglementaires
+   - Références aux documents projets
+
+1.3. Environnement
+   - Architecture technique détaillée
+   - Systèmes connectés (interfaces)
+   - Contraintes d'intégration
+   - Prérequis matériels/logiciels
+   - Environnement de déploiement
+
+1.4. Terminologie et sigles
+   - Glossaire complet avec définitions
+   - Liste des acronymes avec explications
+   - Termes techniques spécifiques
 
 ### 2. ARCHITECTURE FONCTIONNELLE
-2.1. Modules fonctionnels (découpage, description des modules)
-2.2. Synoptique fonctionnel (flux entre fonctions)
+2.1. Modules fonctionnels
+   - Découpage modulaire détaillé
+   - Responsabilités de chaque module
+   - Interactions entre modules
+   - Spécificités techniques
 
-### 3. SPECIFICATIONS FONCTIONNELLES
+2.2. Synoptique fonctionnel
+   - Diagramme textuel des flux
+   - Séquencement des opérations
+   - Points d'intégration critiques
+   - Flux principaux et secondaires
+
+### 3. SPECIFICATIONS FONCTIONNELLES (À DÉTAILLER POUR CHAQUE MODULE)
 Pour chaque module identifié :
-- Nom du module
-- Pour chaque fonction :
-  - Définition (objectif de la fonction)
-  - Identification (code, acteur, déclencheur, conséquences IHM et traitement)
+- Nom du module et version
+- Description approfondie :
+  * Finalité et portée
+  * Contraintes spécifiques
+  * Hypothèses techniques
+
+Pour chaque fonction :
+  - Définition complète :
+    * Objectif métier
+    * Valeur ajoutée
+    * Critères de succès
+
+  - Identification précise :
+    * Code unique (norme de nommage)
+    * Acteurs concernés (rôles)
+    * Déclencheurs (événements)
+    * Préconditions et postconditions
+    * Impacts IHM détaillés
+
   - Description du processus :
-    - Entrées
-    - Traitement
-    - Sorties
-    - Règles de gestion (Pas d'Abréviation écrit la règle de gestion)
+    * Entrées : format, source, validation
+    * Traitement : algorithme, logique métier
+    * Sorties : format, destination, qualité
+    * Règles de gestion : formulation complète sans abréviation
+    * Cas d'erreur et gestion des exceptions
+    * Contrôles de qualité
 
 ### 4. REPRISE DE L'EXISTANT
 4.1. Procédure de reprise
+   - Stratégie de migration
+   - Plan de conversion
+   - Nettoyage des données
+   - Validation post-migration
+
 4.2. Contraintes de reprise
+   - Compatibilités
+   - Anomalies connues
+   - Limitations techniques
+   - Périmètre exclu
 
 ### 5. RECAPITULATIF DES REGLES DE GESTION
-Tableau récapitulatif avec fonction associée à chaque règle.
+Tableau structuré contenant :
+- Identifiant unique de la règle
+- Libellé complet et non ambigu
+- Module/fonction associée
+- Source métier
+- Critère d'application
+- Exemples concrets
+- Exceptions éventuelles
 
 ### 6. VISA DE VALIDATION
-Présentation des aspects validés et les parties prenantes concernées.
+- Liste des validations requises
+- Responsables par domaine
+- Critères d'acceptation
+- Preuves de validation
+- Planning de recette
 
 ---
 
-Tu dois **extraire, analyser et structurer le contenu du CDC suivant** pour produire automatiquement un DCF de qualité conforme à cette structure, en tenant compte :
-- des besoins exprimés,
-- des règles de gestion métier,
-- des exigences fonctionnelles,
-- des contraintes techniques,
-- des modules évoqués.
+**Directives spécifiques :**
+1. Analyse minutieusement le CDC pour extraire toutes les exigences implicites et explicites
+2. Structure le contenu de manière logique et progressive
+3. Utilise un langage technique précis mais accessible
+4. Fournis des exemples concrets quand nécessaire
+5. Identifie clairement les dépendances entre composants
+6. Mentionne les contraintes et limitations de manière transparente
+7. Propose des recommandations pour les aspects critiques
 
-Voici le contenu du CDC :
+**Approche rédactionnelle :**
+- Style professionnel et normatif
+- Phrases complètes et structurées
+- Terminologie cohérente
+- Numérotation précise des éléments
+- Mise en forme claire avec des paragraphes aérés
 
-\"\"\"{cdc_text[:15000]}\"\"\"
+Voici le contenu du CDC à analyser :
 
-Rédige maintenant un DCF complet et bien formaté à partir de ce CDC.
+\"\"\"{cdc_text[:30000]}\"\"\"
+
+Génère maintenant un DCF exhaustif, en développant particulièrement :
+- Les règles de gestion avec leur logique complète
+- Les scénarios d'utilisation typiques
+- Les cas limites à prendre en compte
+- Les interfaces système détaillées
+- Les contraintes de performance
 """
+
 
 def call_gpt(prompt, api_key, endpoint, deployment):
     """Appelle l'API Azure OpenAI pour générer le DCF."""
